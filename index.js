@@ -62,7 +62,7 @@ export default e => {
 
   const debugGeo = new THREE.BoxGeometry( 0.01, 0.01, 0.01);
   const debugMat = new THREE.MeshBasicMaterial( {color: 0x00ff00} );
-  const decalTextureName = "pistol/bulletHole.jpg";
+  const decalTextureName = "bulletHole.jpg";
   const decalTexture = textureLoader.load(`${import.meta.url.replace(/(\/)[^\/]*$/, '$1')}${ decalTextureName}`);
   // decalTexture.needsUpdate = true;
   const decalMaterial = new THREE.MeshPhysicalMaterial({
@@ -139,7 +139,7 @@ export default e => {
     }
     
     {
-      let u2 = `${baseUrl}pistol/tommy.glb`;
+      let u2 = `${baseUrl}tommy.glb`;
       if (/^https?:/.test(u2)) {
         u2 = '/@proxy/' + u2;
       }

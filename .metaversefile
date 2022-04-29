@@ -1,5 +1,6 @@
 {
   "name": "Thompson",
+  "description": "machine-gun",
   "start_url": "index.js",
   "components": [
     {

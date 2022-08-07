@@ -106,11 +106,6 @@ export default e => {
   const appDecalMeshes = [];
   const decalMeshMap = new Map();
 
-  const _addDecalMesh = decalMesh => {
-    scene.add(decalMesh);
-    appDecalMeshes.push(decalMesh);
-  };
-
   const decalMeshCleanup = (e) => {
     const destroyingApp = e.target;
     const destroyingDecalMesh = decalMeshMap.get(destroyingApp);
@@ -240,7 +235,8 @@ export default e => {
               const hasTargetApp = decalMeshMap.has(targetApp);
               if (!hasTargetApp) {
                 const newDecalMesh = _makeDecalMesh();
-                _addDecalMesh(newDecalMesh);
+                scene.add(newDecalMesh);
+                appDecalMeshes.push(newDecalMesh);
                 decalMeshMap.set(targetApp, newDecalMesh);
                 // listening for destroy event on the hit app
                 targetApp.addEventListener('destroy', decalMeshCleanup);

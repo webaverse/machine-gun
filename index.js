@@ -78,6 +78,17 @@ export default e => {
   // const debugMesh = [];
   const debugDecalVertPos = false;
 
+  let appDecalMesh;
+  const decalAppMap = new Map();
+
+  const decalMeshCleanup = (e) => {
+    const destroyingApp = e.target;
+    const destroyingDecalMesh = decalAppMap.get(destroyingApp);
+    scene.remove(destroyingDecalMesh);
+    appDecalMesh = _makeDecalMesh();
+    scene.add(appDecalMesh);
+  };
+
   const maxNumDecals = 128;
   const decalGeometry = new THREE.PlaneBufferGeometry(0.5, 0.5, 8, 8).toNonIndexed();
   const _makeDecalMesh = () => {
@@ -102,8 +113,8 @@ export default e => {
 
     return decalMesh;
   };
-  const decalMesh = _makeDecalMesh();
-  scene.add(decalMesh);
+  appDecalMesh = _makeDecalMesh();
+  scene.add(appDecalMesh);
 
   let gunApp = null;
   let explosionApp = null;
@@ -223,8 +234,18 @@ export default e => {
         {
           const result = physics.raycast(gunApp.position, gunApp.quaternion.clone().multiply(z180Quaternion));
           if (result) {
-            
             const targetApp = getAppByPhysicsId(result.objectId);
+
+            if (appDecalMesh) {
+              if (targetApp) {
+                const hasTargetApp = decalAppMap.has(targetApp);
+                if (!hasTargetApp) {
+                  decalAppMap.set(targetApp, appDecalMesh);
+                  // listening for destroy event on the hit app
+                  targetApp.addEventListener('destroy', decalMeshCleanup);
+                }
+              }
+            }
 
             const normal = new THREE.Vector3().fromArray(result.normal);
             const newPointVec = new THREE.Vector3().fromArray(result.point);
@@ -298,38 +319,38 @@ export default e => {
             localDecalGeometry.computeVertexNormals();
             // now, we copy the localDecalGeometry into the decalMesh.geometry at the appropriate position
             // we make sure to copy the position, uv, normal, and index. all of these attributes should be correctly offset
-            const offset = decalMesh.offset;
+            const offset = appDecalMesh.offset;
             // console.log('offset', decalMesh.offset);
             for (let i = 0; i < localDecalGeometry.attributes.position.count; i++) {
-              decalMesh.geometry.attributes.position.setXYZ( i + offset, localDecalGeometry.attributes.position.getX(i), localDecalGeometry.attributes.position.getY(i), localDecalGeometry.attributes.position.getZ(i) );
-              decalMesh.geometry.attributes.uv.setXY( i + offset, localDecalGeometry.attributes.uv.getX(i), localDecalGeometry.attributes.uv.getY(i) );
-              decalMesh.geometry.attributes.normal.setXYZ( i + offset, localDecalGeometry.attributes.normal.getX(i), localDecalGeometry.attributes.normal.getY(i), localDecalGeometry.attributes.normal.getZ(i) );
+              appDecalMesh.geometry.attributes.position.setXYZ( i + offset, localDecalGeometry.attributes.position.getX(i), localDecalGeometry.attributes.position.getY(i), localDecalGeometry.attributes.position.getZ(i) );
+              appDecalMesh.geometry.attributes.uv.setXY( i + offset, localDecalGeometry.attributes.uv.getX(i), localDecalGeometry.attributes.uv.getY(i) );
+              appDecalMesh.geometry.attributes.normal.setXYZ( i + offset, localDecalGeometry.attributes.normal.getX(i), localDecalGeometry.attributes.normal.getY(i), localDecalGeometry.attributes.normal.getZ(i) );
               // decalMesh.geometry.index.setX( i + offset, localDecalGeometry.index.getX(i) );
             }
             // flag geometry attributes for update
-            decalMesh.geometry.attributes.position.updateRange = {
+            appDecalMesh.geometry.attributes.position.updateRange = {
               offset: offset*3,
               count: localDecalGeometry.attributes.position.array.length,
             };
-            decalMesh.geometry.attributes.position.needsUpdate = true;
-            decalMesh.geometry.attributes.uv.updateRange = {
+            appDecalMesh.geometry.attributes.position.needsUpdate = true;
+            appDecalMesh.geometry.attributes.uv.updateRange = {
               offset: offset*2,
               count: localDecalGeometry.attributes.uv.array.length,
             };
-            decalMesh.geometry.attributes.uv.needsUpdate = true;
-            decalMesh.geometry.attributes.normal.updateRange = {
+            appDecalMesh.geometry.attributes.uv.needsUpdate = true;
+            appDecalMesh.geometry.attributes.normal.updateRange = {
               offset: offset*3,
               count: localDecalGeometry.attributes.normal.array.length,
             };
-            decalMesh.geometry.attributes.normal.needsUpdate = true;
+            appDecalMesh.geometry.attributes.normal.needsUpdate = true;
             // decalMesh.geometry.index.updateRange = {
             //   offset,
             //   count: localDecalGeometry.index.count,
             // };
             //decalMesh.geometry.index.needsUpdate = true;
             // update geometry attribute offset
-            decalMesh.offset += localDecalGeometry.attributes.position.count;
-            decalMesh.offset = decalMesh.offset % decalMesh.geometry.attributes.position.count;
+            appDecalMesh.offset += localDecalGeometry.attributes.position.count;
+            appDecalMesh.offset = appDecalMesh.offset % appDecalMesh.geometry.attributes.position.count;
 
             explosionApp.position.fromArray(result.point);
             explosionApp.quaternion.setFromRotationMatrix(
@@ -463,14 +484,19 @@ export default e => {
   });
   
   useCleanup(() => {
+    for(const [targetApp, decalMesh] of decalAppMap.entries())
+    {
+      targetApp.removeEventListener('destroy', decalMeshCleanup);
+      scene.remove(decalMesh);
+      decalAppMap.delete(targetApp);
+    }
     for (const subApp of subApps) {
       if (subApp) {
-        // metaversefile.removeApp(subApp);
         scene.remove(subApp);
         subApp.destroy();
       }
     }
-    scene.remove(decalMesh);
+    scene.remove(appDecalMesh);
   });
 
   return app;

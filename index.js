@@ -78,17 +78,6 @@ export default e => {
   // const debugMesh = [];
   const debugDecalVertPos = false;
 
-  let appDecalMesh;
-  const decalMeshMap = new Map();
-
-  const decalMeshCleanup = (e) => {
-    const destroyingApp = e.target;
-    const destroyingDecalMesh = decalMeshMap.get(destroyingApp);
-    scene.remove(destroyingDecalMesh);
-    appDecalMesh = _makeDecalMesh();
-    scene.add(appDecalMesh);
-  };
-
   const maxNumDecals = 128;
   const decalGeometry = new THREE.PlaneBufferGeometry(0.5, 0.5, 8, 8).toNonIndexed();
   const _makeDecalMesh = () => {
@@ -113,8 +102,20 @@ export default e => {
 
     return decalMesh;
   };
-  appDecalMesh = _makeDecalMesh();
-  scene.add(appDecalMesh);
+
+  const appDecalMeshes = [];
+  const decalMeshMap = new Map();
+
+  const _addDecalMesh = decalMesh => {
+    scene.add(decalMesh);
+    appDecalMeshes.push(decalMesh);
+  };
+
+  const decalMeshCleanup = (e) => {
+    const destroyingApp = e.target;
+    const destroyingDecalMesh = decalMeshMap.get(destroyingApp);
+    scene.remove(destroyingDecalMesh);
+  };
 
   let gunApp = null;
   let explosionApp = null;
@@ -235,17 +236,18 @@ export default e => {
           const result = physics.raycast(gunApp.position, gunApp.quaternion.clone().multiply(z180Quaternion));
           if (result) {
             const targetApp = getAppByPhysicsId(result.objectId);
-
-            if (appDecalMesh) {
-              if (targetApp) {
-                const hasTargetApp = decalMeshMap.has(targetApp);
-                if (!hasTargetApp) {
-                  decalMeshMap.set(targetApp, appDecalMesh);
-                  // listening for destroy event on the hit app
-                  targetApp.addEventListener('destroy', decalMeshCleanup);
-                }
+            if (targetApp) {
+              const hasTargetApp = decalMeshMap.has(targetApp);
+              if (!hasTargetApp) {
+                const newDecalMesh = _makeDecalMesh();
+                _addDecalMesh(newDecalMesh);
+                decalMeshMap.set(targetApp, newDecalMesh);
+                // listening for destroy event on the hit app
+                targetApp.addEventListener('destroy', decalMeshCleanup);
               }
             }
+
+            const appDecalMesh = decalMeshMap.get(targetApp);
 
             const normal = new THREE.Vector3().fromArray(result.normal);
             const newPointVec = new THREE.Vector3().fromArray(result.point);
@@ -484,11 +486,13 @@ export default e => {
   });
   
   useCleanup(() => {
-    for(const [targetApp, decalMesh] of decalMeshMap.entries())
-    {
+    for (const [targetApp, decalMesh] of decalMeshMap.entries()) {
       targetApp.removeEventListener('destroy', decalMeshCleanup);
       scene.remove(decalMesh);
       decalMeshMap.delete(targetApp);
+    }
+    for (const decalMesh of appDecalMeshes) {
+      scene.remove(decalMesh);
     }
     for (const subApp of subApps) {
       if (subApp) {
@@ -496,7 +500,6 @@ export default e => {
         subApp.destroy();
       }
     }
-    scene.remove(appDecalMesh);
   });
 
   return app;

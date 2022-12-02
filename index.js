@@ -5,7 +5,6 @@ const {useApp, useFrame, useActivate, useWear, useUse, useLocalPlayer, usePhysic
 
 const {clamp} = MathUtils;
 const baseUrl = import.meta.url.replace(/(\/)[^\/\\]*$/, '$1');
-
 const localVector = new THREE.Vector3();
 const localMatrix = new THREE.Matrix4();
 
@@ -376,7 +375,7 @@ export default e => {
             bulletPointLight.startTime = performance.now();
             bulletPointLight.endTime = bulletPointLight.startTime + bulletSparkTime;
           
-            if (targetApp) {
+            if (targetApp && targetApp.getComponent('vincibility') !== 'invincible') {
               const localPlayer = useLocalPlayer();
               const damage = 2;
 

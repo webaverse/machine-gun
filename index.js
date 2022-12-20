@@ -35,10 +35,6 @@ export default e => {
     app.matrixWorld.copy(subApp.matrixWorld);
   }; */
   const sounds = useSound();
-  const soundFiles = sounds.getSoundFiles();
-  const soundIndex=soundFiles.combat.map(sound => sound.name).indexOf('combat/Colt45_Shot2.wav');
-  
-  
   let pointLights = [];
   const gunPointLight = new THREE.PointLight(0xFFFFFF, 5);
   gunPointLight.castShadow = false; 
@@ -483,7 +479,7 @@ export default e => {
 
         if(isShooting && ((timestamp - lastShootTime) > fireDelay)) {
           lastShootTime = timestamp;
-          sounds.playSound(soundFiles.combat[soundIndex]);
+          sounds.playSound('smg_spray');
           gunApp.use();
         }
       }
